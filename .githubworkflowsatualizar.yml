@@ -1,0 +1,83 @@
+name: Atualizar dados e publicar
+
+on:
+  schedule:
+    - cron: "17 22 * * 1-5"   # 19h17 de Brasília, dias úteis (depois do fechamento de Nova York)
+  workflow_dispatch:           # botão "Run workflow" na aba Actions
+  push:
+    branches: [main]
+    paths-ignore: ["status/**", "README.md", "docs/**"]
+
+permissions:
+  contents: write   # só para o registro mensal em status/ (mantém o agendamento ativo)
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependências
+        run: pip install --upgrade -r requirements.txt
+
+      # O cache de preços fica guardado no próprio GitHub Actions (não vai para o repositório público).
+      # Se a fonte falhar num dia, o painel usa o último dado salvo.
+      - name: Restaurar cache de preços
+        uses: actions/cache/restore@v5
+        with:
+          path: data/prices
+          key: precos-${{ github.run_id }}
+          restore-keys: precos-
+
+      - name: Baixar dados e calcular métricas
+        env:
+          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
+        run: python scripts/build_data.py
+
+      - name: Salvar cache de preços
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: data/prices
+          key: precos-${{ github.run_id }}
+
+      # O GitHub desliga agendamentos de repositórios públicos após 60 dias sem atividade.
+      # Um commit pequeno por mês evita isso.
+      - name: Registro mensal de execução
+        run: |
+          mkdir -p status
+          date -u +"%Y-%m" > status/ultimo_mes_atualizado.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add status
+          if ! git diff --cached --quiet; then
+            git commit -m "Registro mensal de execução"
+            git push || echo "push não realizado (sem problema)"
+          fi
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
