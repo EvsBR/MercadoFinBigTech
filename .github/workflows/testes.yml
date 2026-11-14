@@ -32,11 +32,18 @@ jobs:
           TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
           TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
         run: python scripts/conferir_reservas.py AAPL NVDA
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dados-de-ensaio
-          path: |
-            site/data/indice.json
-            site/data/saude.json
-            site/data/eua/bigtechs/meta.json
-          retention-days: 7
+      - name: Amostra dos números gerados
+        run: |
+          python - <<'PY'
+          import json, glob
+          for f in sorted(glob.glob("site/data/*/*/meta.json")):
+              m = json.load(open(f))
+              print(f)
+              for r in m["tickers"] + m["benchmarks"]:
+                  print(f"  {r['symbol']:6s} último {r['last_price']:>10} | no ano {r['ytd']:+.1%} | drawdown {r['dd_current']:.1%} | pior {r['dd_max']:.1%} em {r['dd_max_trough']} | fase {r['phase']} | {r['source']}")
+          s = json.load(open("site/data/saude.json"))
+          for m in s["mercados"]:
+              for a, v in m["ativos"].items():
+                  for av in v.get("avisos", []):
+                      print(f"  aviso {a}: {av}")
+          PY
