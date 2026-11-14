@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel Big Techs — drawdowns, ciclos, sazonalidade e correlações</title>
+  <meta name="description" content="Histórico completo das big techs: drawdowns, ciclos de alta e baixa, sazonalidade mensal, bimestral e trimestral e correlações. Atualizado automaticamente.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%232a78d6%22/%3E%3Cpath d=%22M3 11l3-3 2 2 5-5%22 stroke=%22white%22 stroke-width=%221.6%22 fill=%22none%22/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script src="vendor/echarts.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <div>
+        <h1 id="title">Painel Big Techs</h1>
+        <p class="sub" id="subtitle">Carregando dados…</p>
+      </div>
+      <button class="ghost" id="themeBtn" type="button" aria-label="Alternar tema claro/escuro">Tema: automático</button>
+    </div>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <div class="filters" role="toolbar" aria-label="Filtros">
+    <label>Ativo
+      <select id="symSel" aria-label="Escolher ativo"></select>
+    </label>
+    <nav class="tabs" role="tablist" aria-label="Seções">
+      <button role="tab" data-tab="resumo">Resumo</button>
+      <button role="tab" data-tab="drawdowns">Drawdowns</button>
+      <button role="tab" data-tab="ciclos">Ciclos</button>
+      <button role="tab" data-tab="sazonalidade">Sazonalidade</button>
+      <button role="tab" data-tab="correlacoes">Correlações</button>
+      <button role="tab" data-tab="metodologia">Metodologia</button>
+    </nav>
+  </div>
+
+  <main>
+    <!-- RESUMO -->
+    <section id="tab-resumo" class="tab" hidden>
+      <div class="card">
+        <div class="card-head">
+          <h2>Onde cada ativo está hoje</h2>
+          <p class="hint">Clique no cabeçalho para ordenar e na linha para abrir o ativo.</p>
+        </div>
+        <div class="table-wrap"><table class="data" id="summaryTable"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Drawdown atual × pior drawdown da história</h2>
+          <p class="hint">Quanto cada ação está abaixo do próprio recorde, comparado com a maior queda que ela já teve.</p>
+        </div>
+        <div class="chart" id="chDdBars" style="height:420px"></div>
+      </div>
+    </section>
+
+    <!-- DRAWDOWNS -->
+    <section id="tab-drawdowns" class="tab" hidden>
+      <div class="tiles" id="ddTiles"></div>
+      <div class="card">
+        <div class="card-head">
+          <h2 id="ddTitle">Preço e drawdown</h2>
+          <p class="hint">Preço ajustado em escala logarítmica (cada degrau igual = mesma variação percentual). Embaixo, a distância do último recorde. Arraste a barra inferior para dar zoom.</p>
+        </div>
+        <div class="chart" id="chPriceDd" style="height:560px"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Maiores quedas (≥ 10%)</h2></div>
+        <div class="table-wrap"><table class="data" id="ddTable"></table></div>
+      </div>
+    </section>
+
+    <!-- CICLOS -->
+    <section id="tab-ciclos" class="tab" hidden>
+      <div class="controls">
+        <span class="ctl-label">Regra do ciclo</span>
+        <div class="seg" id="thSeg" role="group" aria-label="Limiar do ciclo"></div>
+        <span class="hint">Uma fase de baixa é confirmada quando o preço cai X% desde o pico; uma de alta, quando sobe X% desde o fundo.</span>
+      </div>
+      <div class="tiles" id="cycTiles"></div>
+      <div class="card">
+        <div class="card-head">
+          <h2 id="cycTitle">Fases de alta e baixa</h2>
+          <div class="legend-inline"><span class="sw sw-bull"></span>Alta <span class="sw sw-bear"></span>Baixa</div>
+        </div>
+        <div class="chart" id="chCycles" style="height:440px"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Retorno móvel</h2>
+          <p class="hint">Retorno acumulado nos últimos 12 meses e retorno anualizado dos últimos 3 anos, em cada data. Mostra a "maré" de cada ciclo.</p>
+        </div>
+        <div class="chart" id="chRolling" style="height:360px"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Todas as fases</h2></div>
+        <div class="table-wrap"><table class="data" id="cycTable"></table></div>
+      </div>
+    </section>
+
+    <!-- SAZONALIDADE -->
+    <section id="tab-sazonalidade" class="tab" hidden>
+      <div class="controls">
+        <div class="seg" id="freqSeg" role="group" aria-label="Frequência">
+          <button data-v="M">Mensal</button><button data-v="B">Bimestral</button><button data-v="Q">Trimestral</button>
+        </div>
+        <div class="seg" id="modeSeg" role="group" aria-label="Modo">
+          <button data-v="abs">Retorno absoluto</button><button data-v="rel">Contra referência</button>
+        </div>
+        <label class="inline">Referência <select id="benchSel"></select></label>
+        <label class="inline">Desde <select id="sinceSel"></select></label>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2 id="seasTitle">Retorno médio por período</h2>
+          <p class="hint" id="seasHint">Média dos períodos completos. Passe o mouse para ver mediana, % de vezes positivo, melhor e pior.</p>
+        </div>
+        <div class="chart" id="chSeas" style="height:320px"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Tabela ano a ano</h2>
+          <p class="hint">Azul = positivo, vermelho = negativo. Valores em itálico (*) são do período em andamento.</p>
+        </div>
+        <div class="table-wrap"><table class="data heat" id="seasTable"></table></div>
+      </div>
+    </section>
+
+    <!-- CORRELAÇÕES -->
+    <section id="tab-correlacoes" class="tab" hidden>
+      <div class="controls">
+        <span class="ctl-label">Janela</span>
+        <div class="seg" id="winSeg" role="group" aria-label="Janela da correlação"></div>
+        <span class="hint">Correlação de retornos semanais. 1 = andam juntas; 0 = sem relação; −1 = opostas.</span>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Matriz de correlação</h2></div>
+        <div class="table-wrap"><table class="data heat corr" id="corrTable"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2 id="rollCorrTitle">Correlação móvel (52 semanas)</h2>
+          <p class="hint">Como a ligação do ativo com cada referência mudou ao longo do tempo.</p>
+        </div>
+        <div class="chart" id="chRollCorr" style="height:340px"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Correlação média entre as big techs (52 semanas)</h2>
+          <p class="hint">Média das correlações de todos os pares. Valores altos = as ações se movem em bloco, típico de mercados guiados por um fator macro único ou por pânico.</p>
+        </div>
+        <div class="chart" id="chAvgCorr" style="height:320px"></div>
+      </div>
+    </section>
+
+    <!-- METODOLOGIA -->
+    <section id="tab-metodologia" class="tab prose" hidden>
+      <div class="card">
+        <h2>Como os números são calculados</h2>
+        <h3>Dados</h3>
+        <p>Fechamentos diários ajustados por desdobramentos e dividendos (retorno total), do primeiro pregão disponível de cada ativo até o último fechamento. A coleta roda todo dia útil depois do fechamento de Nova York. Fonte principal: Yahoo Finance (via biblioteca <code>yfinance</code>); fonte reserva opcional: Tiingo. Se as duas falharem, o painel usa o último dado salvo e avisa no topo da página.</p>
+        <h3>Drawdown</h3>
+        <p>Distância do preço até o maior valor já registrado até aquela data: <code>preço ÷ recorde anterior − 1</code>. Cada episódio vai do pico ao fundo e termina quando o preço supera o pico antigo. Os gráficos usam o menor valor de cada semana; a tabela usa dados diários.</p>
+        <h3>Ciclos</h3>
+        <p>Regra do limiar (15%, 20% ou 30%): uma fase de baixa é confirmada quando o preço cai o limiar desde o último pico; uma fase de alta, quando sobe o limiar desde o último fundo. Cada fase começa no pico ou no fundo, não no dia da confirmação. A primeira fase começa no primeiro dado disponível e fica fora das medianas. A fase em andamento só vira outra quando o limiar é atingido. Por isso uma ação pode estar 15% abaixo do pico e ainda constar em "alta" pela regra de 20%.</p>
+        <h3>Sazonalidade</h3>
+        <p>Retornos de fim de mês a fim de mês. Bimestres (jan–fev, mar–abr…) e trimestres são o produto dos meses que os compõem. Só entram nas estatísticas os períodos completos. O período em andamento aparece na tabela marcado com *. No modo "contra referência", cada célula é o retorno do ativo menos o da referência no mesmo período.</p>
+        <h3>Correlação e beta</h3>
+        <p>Correlação de Pearson dos retornos semanais (último pregão de cada semana). As janelas da matriz usam pelo menos 80% de semanas com dados. "Tudo" usa todo o período em comum de cada par. O beta de 3 anos é a covariância com a referência principal dividida pela variância da referência.</p>
+        <h3>Limitações</h3>
+        <ul>
+          <li>Os dados vêm de fontes gratuitas e não oficiais. Podem ter falhas pontuais e sofrer revisões.</li>
+          <li>Padrões passados, especialmente sazonais, podem não se repetir, sobretudo quando o negócio da empresa muda.</li>
+          <li>Material educacional. Não é recomendação de investimento.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p id="footNote">Fonte: Yahoo Finance (preços ajustados). Uso educacional; não é recomendação de investimento.</p>
+  </footer>
+</body>
+</html>
