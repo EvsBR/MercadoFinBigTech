@@ -1,7 +1,11 @@
 {
   "title": "Painel Big Techs",
   "start": "max",
-  "cycle_thresholds": [0.15, 0.20, 0.30],
-  "logo_dev_token": "",
+  "cycle_thresholds": [
+    0.15,
+    0.2,
+    0.3
+  ],
+  "logo_dev_token": "pk_RzUMQ_4CTDGqyiPtwjFWpQ",
   "_comentario": "Os ativos ficam em universo/. 'logo_dev_token' é a chave publicável (pk_...) da Logo.dev; vazia = o site mostra as iniciais do ticker."
 }
