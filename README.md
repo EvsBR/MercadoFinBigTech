@@ -45,46 +45,52 @@ Depois siga os passos 4 a 6 da opção A.
 
 ## Como funciona a atualização automática
 
-- Todo **dia útil às 19h17 (Brasília)**, depois do fechamento de Nova York, o GitHub Actions:
-  1. baixa o histórico diário ajustado (dividendos e desdobramentos) de todos os ativos;
-  2. recalcula todas as métricas;
-  3. publica o site de novo.
-- Fontes, nesta ordem:
-  1. Yahoo Finance via `yfinance`;
-  2. Yahoo Finance via o endpoint direto `v8/chart`;
-  3. **Tiingo**, se você configurar a chave (veja abaixo);
-  4. o último dado salvo. Nesse caso, o site mostra um aviso no topo.
-- O GitHub às vezes atrasa execuções agendadas em alguns minutos. Você pode rodar na hora quando quiser, pela aba **Actions → Run workflow**.
-- Repositórios públicos têm agendamentos desligados após 60 dias sem atividade. Para evitar isso, o workflow faz um pequeno commit por mês em `status/`.
+Todo dia útil às 19h17 de Brasília, o GitHub Actions baixa as cotações, confere, guarda na base, recalcula os indicadores e publica o site. Cada execução mostra a tabela **Saúde dos dados** na aba Actions.
 
-### Fonte reserva (opcional, recomendado): Tiingo
+As cotações vêm de até três fontes, tentadas nesta ordem para cada ativo:
 
-O Yahoo não tem API oficial e às vezes bloqueia acessos automáticos. Para ter um plano B gratuito:
+| Fonte | Papel | Precisa de chave? |
+|---|---|---|
+| Yahoo Finance | Principal. Histórico completo. | Não |
+| Tiingo | Reserva de histórico completo (50 chamadas por hora). | Sim: segredo `TIINGO_API_KEY` |
+| Twelve Data | Reserva que completa os últimos pregões (800 chamadas por dia). | Sim: segredo `TWELVEDATA_API_KEY` |
 
-1. Crie uma conta grátis em [tiingo.com](https://www.tiingo.com) e copie o seu **API Token**.
-2. No repositório, vá em **Settings → Secrets and variables → Actions → New repository secret**.
-   - Nome: `TIINGO_API_KEY`
-   - Valor: o token.
+Se todas falharem, o site usa a base salva e avisa no topo da página. Se menos da metade dos ativos tiver dados, o site não é alterado.
 
-A Tiingo cobre ações e ETFs dos EUA, mas não índices (símbolos com `^`).
+### Chaves gratuitas (opcionais, recomendadas)
 
----
+1. **Tiingo:** crie a conta em tiingo.com, copie o token em *Account → API → Token*.
+2. **Twelve Data:** crie a conta em twelvedata.com, copie a chave em *API Keys*.
+3. No repositório: **Settings → Secrets and variables → Actions → New repository secret**. Crie `TIINGO_API_KEY` e `TWELVEDATA_API_KEY` com os valores copiados.
 
-## Personalizar (`config.json`)
+### Logotipos (opcional)
+
+Crie a conta em logo.dev, copie a **publishable key** (`pk_...`) e cole em `config.json`, no campo `logo_dev_token`. Essa chave é feita para ficar visível no site. Sem ela, aparecem as iniciais do ticker. O plano gratuito pede o crédito "Logos provided by Logo.dev", que o site já põe no rodapé.
+
+### Backup versionado da base (opcional)
+
+1. Crie um repositório **privado** chamado `MercadoFinBigTech-dados` (o nome deste repositório + `-dados`), com um README.
+2. Em *Settings (da sua conta) → Developer settings → Fine-grained tokens*, gere um token com acesso só a esse repositório e permissão **Contents: Read and write**.
+3. Salve o token neste repositório como segredo `DADOS_TOKEN`.
+
+## Adicionar ações, segmentos e mercados
+
+Os ativos ficam em `universo/`. Para incluir uma ação, acrescente uma linha no segmento desejado de `universo/eua.json`:
+
+```json
+{"id": "NFLX", "nome": "Netflix"}
+```
+
+Para criar um segmento, acrescente um bloco em `segmentos` com `id`, `nome` e `ativos`. Detalhes e as outras receitas estão em `docs/ARQUITETURA.md`.
+
+`config.json` guarda só as opções gerais:
 
 | Campo | O que faz |
 |---|---|
-| `tickers` | Lista de ações. Use o símbolo do Yahoo Finance: `NVDA`, `PETR4.SA` (B3), `ASML` etc. |
-| `benchmarks` | Referências usadas na sazonalidade relativa e nas correlações (ex.: `QQQ`, `SPY`, `SMH`, `BOVA11.SA`). |
-| `main_benchmark` | Referência da correlação e do beta na aba Resumo. |
-| `start` | `"max"` para todo o histórico, ou uma data como `"2000-01-01"`. |
-| `cycle_thresholds` | Limiares dos ciclos (ex.: `[0.15, 0.20, 0.30]`). |
-| `currency` | Moeda exibida (`"US$"`). Também pode ser definida por ativo, por exemplo `{"symbol": "PETR4.SA", "name": "Petrobras", "currency": "R$"}`. |
-| `yahoo` / `tiingo` | (opcional, por ativo) símbolo diferente em cada fonte, por exemplo `{"symbol": "BRK-B", "tiingo": "brk-b"}`. |
-
-Editou e salvou (commit)? O site se reconstrói sozinho em poucos minutos.
-
----
+| `title` | Título do site. |
+| `start` | `"max"` (desde o IPO) ou uma data, ex.: `"2000-01-01"`. |
+| `cycle_thresholds` | Limiares da regra de ciclos. |
+| `logo_dev_token` | Chave publicável da Logo.dev. |
 
 ## Ver no seu computador (opcional)
 
@@ -113,15 +119,7 @@ O endereço do GitHub Pages é público. Os links guardam a aba e o ativo, por e
 
 ## Estrutura
 
-```
-config.json                  ← lista de ativos e parâmetros
-requirements.txt
-scripts/build_data.py        ← baixa os dados e calcula todas as métricas
-site/index.html, app.js, style.css
-site/vendor/echarts.min.js   ← biblioteca de gráficos (Apache-2.0), embutida
-site/data/                   ← gerado automaticamente (não versionado)
-.github/workflows/atualizar.yml
-```
+O desenho do projeto está em `docs/ARQUITETURA.md` e o plano das próximas fases em `docs/ROADMAP.md`.
 
 ## Problemas comuns
 

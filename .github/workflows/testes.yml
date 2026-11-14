@@ -1,0 +1,42 @@
+name: Testes
+
+# Roda em qualquer branch que não seja a main: confere o código e faz uma atualização
+# completa com cotações reais, SEM publicar o site.
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install --upgrade -r requirements.txt
+      - name: Testes automáticos
+        run: python -m pytest -q
+      - name: Atualização de ensaio com cotações reais (não publica)
+        env:
+          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+        run: python -m pipeline.construir
+      - name: Conferir a base contra as fontes de reserva
+        env:
+          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+        run: python scripts/conferir_reservas.py AAPL NVDA
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dados-de-ensaio
+          path: |
+            site/data/indice.json
+            site/data/saude.json
+            site/data/eua/bigtechs/meta.json
+          retention-days: 7

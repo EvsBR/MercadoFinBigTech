@@ -1,0 +1,7 @@
+# gerados a cada atualização (não vão para o repositório público)
+site/data/
+site/data.novo/
+data/
+__pycache__/
+*.pyc
+.pytest_cache/

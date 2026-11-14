@@ -1,11 +1,12 @@
-/* Painel Big Techs — front-end estático (sem build). Lê os JSON gerados em data/ */
+/* Painel de análise — front-end estático (sem build). Lê os JSON gerados em data/:
+   indice.json (mercados e segmentos) -> <mercado>/<segmento>/meta.json -> <mercado>/ativos/<ATIVO>.json */
 "use strict";
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
 
 const state = {
-  meta: null, corr: null, cache: {},
+  idx: null, market: null, seg: null, meta: null, corr: null, cache: {},
   tab: "resumo", sym: null,
   th: "20", freq: "M", mode: "abs", bench: null, since: null, win: "3a",
   sortKey: "dd_current", sortDir: 1,
@@ -67,8 +68,20 @@ async function getJSON(path) {
 const allRows = () => [...state.meta.tickers, ...state.meta.benchmarks];
 const rowOf = (sym) => allRows().find((r) => r.symbol === sym);
 async function loadSym(sym) {
-  if (!state.cache[sym]) state.cache[sym] = await getJSON("data/" + rowOf(sym).file);
-  return state.cache[sym];
+  const f = rowOf(sym).file;
+  if (!state.cache[f]) state.cache[f] = await getJSON("data/" + f);
+  return state.cache[f];
+}
+/* logotipo: iniciais do ticker sempre; a imagem (Logo.dev) entra por cima se a chave estiver configurada */
+function logo(r) {
+  const tk = state.idx.logo_token;
+  const img = tk && r.logo ? `<img src="https://img.logo.dev/${encodeURI(r.logo)}?token=${encodeURIComponent(tk)}&size=64&format=png&fallback=404" alt="" loading="lazy" referrerpolicy="origin" onerror="this.remove()">` : "";
+  return `<span class="logo" aria-hidden="true">${esc(r.symbol.replace(/[^A-Za-z0-9]/g, "").slice(0, 2))}${img}</span>`;
+}
+const segKey = () => `${state.market}/${state.seg}`;
+async function loadSegment() {
+  const [meta, corr] = await Promise.all([getJSON(`data/${segKey()}/meta.json`), getJSON(`data/${segKey()}/correlations.json`)]);
+  state.meta = { ...state.idx, ...meta }; state.corr = corr;
 }
 
 /* ---------------------------------------------------------------- ECharts base */
@@ -115,8 +128,13 @@ function readHash() {
   const s = h.get("ativo");
   if (s && rowOf(s)) state.sym = s;
 }
+function hashSeg() {
+  const [m, g] = (new URLSearchParams(location.hash.slice(1)).get("seg") || "").split("/");
+  const mk = state.idx.mercados.find((x) => x.id === m);
+  return mk && mk.segmentos.find((x) => x.id === g) ? { market: m, seg: g } : null;
+}
 function writeHash() {
-  const h = new URLSearchParams({ aba: state.tab, ativo: state.sym });
+  const h = new URLSearchParams({ aba: state.tab, seg: segKey(), ativo: state.sym });
   history.replaceState(null, "", "#" + h.toString());
 }
 function setTab(tab) {
@@ -144,7 +162,7 @@ const SUMMARY_COLS = [
 ];
 function summaryCell(r, k) {
   switch (k) {
-    case "symbol": return `<strong>${esc(r.symbol)}</strong><span class="name">${esc(r.name)}</span>`;
+    case "symbol": return `${logo(r)}<strong>${esc(r.symbol)}</strong><span class="name">${esc(r.name)}</span>`;
     case "first_date": return fdate(r.first_date);
     case "last_price": return money(r.last_price, r.currency);
     case "ytd": case "ret_1y": case "cagr":
@@ -177,7 +195,7 @@ function renderResumo() {
     h.onclick = go; h.onkeydown = (e) => { if (e.key === "Enter") go(); };
   });
   $$("tr.click", tbl).forEach((tr) => {
-    const go = () => { state.sym = tr.dataset.sym; $("#symSel").value = state.sym; setTab("drawdowns"); };
+    const go = () => { state.sym = tr.dataset.sym; $("#symSel").value = state.sym; $("#symLogo").innerHTML = logo(rowOf(state.sym)); setTab("drawdowns"); };
     tr.onclick = go; tr.onkeydown = (e) => { if (e.key === "Enter") go(); };
   });
 
@@ -216,19 +234,20 @@ async function renderDrawdowns() {
 
   const S = d.series;
   const price = S.d.map((x, i) => [x, S.p[i]]);
-  const ddv = S.d.map((x, i) => [x, S.dd[i]]);
+  const DD = dd.serie;
+  const ddv = S.d.map((x, i) => [x, DD[i]]);
   const worst = dd.episodes[0];
   let worstPt = null;
   if (worst) { // ponto semanal mais próximo do fundo
     const i = S.d.findIndex((x) => x >= worst.trough);
-    if (i >= 0) worstPt = [S.d[i], S.dd[i]];
+    if (i >= 0) worstPt = [S.d[i], DD[i]];
   }
   const c = chart("chPriceDd");
   c.setOption({
     ...base(th),
     tooltip: { ...base(th).tooltip, formatter: (ps) => {
       const i = ps[0].dataIndex;
-      return `<strong>${dateOf(ps[0])}</strong><br>${swatch(th.s[0])}Preço ajustado: <strong>${money(S.p[i], d.currency)}</strong><br>${swatch(th.red)}Drawdown: <strong>${pct(S.dd[i])}</strong>`;
+      return `<strong>${dateOf(ps[0])}</strong><br>${swatch(th.s[0])}Preço ajustado: <strong>${money(S.p[i], d.currency)}</strong><br>${swatch(th.red)}Drawdown: <strong>${pct(DD[i])}</strong>`;
     } },
     axisPointer: { link: [{ xAxisIndex: "all" }] },
     grid: [{ left: 72, right: 24, top: 16, height: "50%" }, { left: 72, right: 24, top: "64%", bottom: 70 }],
@@ -484,41 +503,72 @@ function applyTheme(mode) {
 }
 
 /* ---------------------------------------------------------------- início */
+/* monta tudo que depende do segmento escolhido (título, avisos, lista de ativos) */
+function applySegment() {
+  const M = state.meta; const I = state.idx;
+  document.title = `${M.title} — drawdowns, ciclos, sazonalidade e correlações`;
+  $("#title").textContent = M.title;
+  const gen = new Date(I.generated_at);
+  const lastClose = allRows().map((t) => t.last_date).sort().pop();
+  $("#subtitle").textContent = `${M.name} · último fechamento: ${fdate(lastClose)} · atualizado em ${gen.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} · histórico ${I.start === "max" ? "completo (desde o IPO)" : "desde " + fdate(I.start)}`;
+  const stale = allRows().filter((r) => r.stale && !I.demo);
+  const banner = $("#banner");
+  banner.hidden = true;
+  if (I.demo) { banner.hidden = false; banner.innerHTML = "<strong>DADOS SINTÉTICOS.</strong> Este painel foi gerado em modo de teste (<code>--demo</code>). Os números não são cotações reais."; }
+  else if (stale.length) { banner.hidden = false; banner.innerHTML = `<strong>Atenção:</strong> sem cotação nova na última atualização para ${stale.map((r) => `${esc(r.symbol)} (até ${fdate(r.last_date)})`).join(", ")}. Mostrando o último dado salvo.`; }
+  const sources = [...new Set(allRows().map((r) => r.source).filter(Boolean))];
+  $("#footNote").innerHTML = `Fonte: ${esc(sources.join(", ") || "—")} · preços ajustados por dividendos e desdobramentos · gerado em ${gen.toISOString().slice(0, 16).replace("T", " ")} UTC · uso educacional, não é recomendação de investimento.` +
+    (I.logo_token ? ` · <a href="https://logo.dev" title="Logo API">Logos provided by Logo.dev</a>` : "");
+
+  const sel = $("#symSel");
+  const opt = (t) => `<option value="${esc(t.symbol)}">${esc(t.symbol)} · ${esc(t.name)}</option>`;
+  sel.innerHTML = `<optgroup label="Ações">${M.tickers.map(opt).join("")}</optgroup><optgroup label="Referências">${M.benchmarks.map(opt).join("")}</optgroup>`;
+  if (!state.sym || !rowOf(state.sym)) state.sym = (rowOf(M.featured) || M.tickers[0] || M.benchmarks[0]).symbol;
+  sel.value = state.sym;
+  $("#symLogo").innerHTML = logo(rowOf(state.sym));
+  state.bench = null; state.since = null;
+}
+async function changeSegment(market, seg) {
+  state.market = market; state.seg = seg;
+  await loadSegment();
+  applySegment();
+  $("#segSel").value = segKey();
+}
+
+/* ---------------------------------------------------------------- início */
 async function init() {
   try {
-    [state.meta, state.corr] = await Promise.all([getJSON("data/meta.json"), getJSON("data/correlations.json")]);
+    state.idx = await getJSON("data/indice.json");
+    const h = hashSeg() || { market: state.idx.mercados[0].id, seg: state.idx.mercados[0].segmentos[0].id };
+    state.market = h.market; state.seg = h.seg;
+    await loadSegment();
   } catch (e) {
     $("#subtitle").innerHTML = `<span class="err">Não encontrei os dados (${esc(e.message)}). Rode <code>python scripts/build_data.py</code> e abra o site por um servidor (veja o README).</span>`;
     return;
   }
-  const M = state.meta;
-  document.title = `${M.title} — drawdowns, ciclos, sazonalidade e correlações`;
-  $("#title").textContent = M.title;
-  const gen = new Date(M.generated_at);
-  const lastClose = M.tickers.map((t) => t.last_date).sort().pop();
-  $("#subtitle").textContent = `Último fechamento: ${fdate(lastClose)} · atualizado em ${gen.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} · histórico ${M.start === "max" ? "completo (desde o IPO)" : "desde " + fdate(M.start)}`;
-  const stale = allRows().filter((r) => r.stale && !M.demo);
-  const banner = $("#banner");
-  if (M.demo) { banner.hidden = false; banner.innerHTML = "<strong>DADOS SINTÉTICOS.</strong> Este painel foi gerado em modo de teste (<code>--demo</code>). Os números não são cotações reais."; }
-  else if (stale.length) { banner.hidden = false; banner.innerHTML = `<strong>Atenção:</strong> a fonte de dados falhou na última atualização para ${stale.map((r) => esc(r.symbol)).join(", ")}. Mostrando o último dado salvo.`; }
-  const sources = [...new Set(allRows().map((r) => r.source).filter(Boolean))];
-  $("#footNote").textContent = `Fonte: ${sources.join(", ") || "—"} · preços ajustados por dividendos e desdobramentos · gerado em ${gen.toISOString().slice(0, 16).replace("T", " ")} UTC · uso educacional, não é recomendação de investimento.`;
-
-  const sel = $("#symSel");
-  sel.innerHTML = `<optgroup label="Ações">${M.tickers.map((t) => `<option value="${esc(t.symbol)}">${esc(t.symbol)} · ${esc(t.name)}</option>`).join("")}</optgroup>` +
-    `<optgroup label="Referências">${M.benchmarks.map((t) => `<option value="${esc(t.symbol)}">${esc(t.symbol)} · ${esc(t.name)}</option>`).join("")}</optgroup>`;
-  state.sym = (M.tickers.find((t) => t.symbol === "NVDA") || M.tickers[0] || M.benchmarks[0]).symbol;
-  state.th = M.cycle_thresholds.includes("20") ? "20" : M.cycle_thresholds[0];
+  const I = state.idx;
+  state.th = I.cycle_thresholds.includes("20") ? "20" : I.cycle_thresholds[0];
+  const segSel = $("#segSel");
+  segSel.innerHTML = I.mercados.map((m) => `<optgroup label="${esc(m.nome)}">${m.segmentos.map((g) => `<option value="${esc(m.id)}/${esc(g.id)}">${esc(g.nome)} (${g.n})</option>`).join("")}</optgroup>`).join("");
+  segSel.value = segKey();
+  applySegment();
   readHash();
-  sel.value = state.sym;
-  sel.onchange = () => { state.sym = sel.value; state.since = null; writeHash(); render(); };
+  const sel = $("#symSel");
+  sel.value = state.sym; $("#symLogo").innerHTML = logo(rowOf(state.sym));
+  const go = async (fn) => { try { await fn(); } catch (e) { console.error(e); $("#subtitle").innerHTML = `<span class="err">Erro ao carregar: ${esc(e.message)}</span>`; } };
+  sel.onchange = () => { state.sym = sel.value; state.since = null; $("#symLogo").innerHTML = logo(rowOf(state.sym)); writeHash(); render(); };
+  segSel.onchange = () => go(async () => { const [m, g] = segSel.value.split("/"); state.sym = null; await changeSegment(m, g); disposeCharts(); writeHash(); render(); });
 
   $$(".tabs button").forEach((b) => (b.onclick = () => setTab(b.dataset.tab)));
   $$("#freqSeg button").forEach((b) => (b.onclick = () => { state.freq = b.dataset.v; renderSazonalidade(); }));
   $$("#modeSeg button").forEach((b) => (b.onclick = () => { state.mode = b.dataset.v; renderSazonalidade(); }));
   $("#benchSel").onchange = (e) => { state.bench = e.target.value; renderSazonalidade(); };
   $("#sinceSel").onchange = (e) => { state.since = +e.target.value; renderSazonalidade(); };
-  window.addEventListener("hashchange", () => { readHash(); $("#symSel").value = state.sym; setTab(state.tab); });
+  window.addEventListener("hashchange", () => go(async () => {
+    const h = hashSeg();
+    if (h && (h.market !== state.market || h.seg !== state.seg)) { state.sym = null; await changeSegment(h.market, h.seg); disposeCharts(); }
+    readHash(); $("#symSel").value = state.sym; $("#symLogo").innerHTML = logo(rowOf(state.sym)); setTab(state.tab);
+  }));
   window.addEventListener("resize", () => Object.values(charts).forEach((c) => c.resize()));
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (!document.documentElement.dataset.theme) { disposeCharts(); render(); } });
 

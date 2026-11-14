@@ -17,6 +17,9 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+env:
+  DADOS_REPO: ${{ github.repository }}-dados   # repositório PRIVADO de backup (opcional)
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -31,26 +34,57 @@ jobs:
       - name: Instalar dependências
         run: pip install --upgrade -r requirements.txt
 
-      # O cache de preços fica guardado no próprio GitHub Actions (não vai para o repositório público).
-      # Se a fonte falhar num dia, o painel usa o último dado salvo.
-      - name: Restaurar cache de preços
+      - name: Testes automáticos
+        run: python -m pytest -q
+
+      # Camada 1 da base de cotações: cache do próprio GitHub Actions (não vai para o repositório público).
+      - name: Restaurar base de cotações (cache)
         uses: actions/cache/restore@v5
         with:
-          path: data/prices
-          key: precos-${{ github.run_id }}
-          restore-keys: precos-
+          path: data/base
+          key: base-${{ github.run_id }}
+          restore-keys: base-
 
-      - name: Baixar dados e calcular métricas
+      # Camada 2 (opcional): repositório privado com histórico versionado. Só roda se o segredo DADOS_TOKEN existir.
+      - name: Restaurar base de cotações (repositório privado)
+        env:
+          DADOS_TOKEN: ${{ secrets.DADOS_TOKEN }}
+        run: |
+          if [ -z "$DADOS_TOKEN" ]; then echo "Backup privado não configurado (segredo DADOS_TOKEN ausente)."; exit 0; fi
+          if git clone --depth 1 "https://x-access-token:${DADOS_TOKEN}@github.com/${DADOS_REPO}.git" /tmp/dados; then
+            if [ -d /tmp/dados/base ]; then mkdir -p data/base && cp -a /tmp/dados/base/. data/base/; fi
+          else
+            echo "::warning::Não consegui abrir o repositório de backup ${DADOS_REPO}. Seguindo só com o cache."
+          fi
+
+      - name: Baixar dados e calcular indicadores
         env:
           TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
-        run: python scripts/build_data.py
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+        run: python -m pipeline.construir
 
-      - name: Salvar cache de preços
+      - name: Salvar base de cotações (cache)
         if: always()
         uses: actions/cache/save@v5
         with:
-          path: data/prices
-          key: precos-${{ github.run_id }}
+          path: data/base
+          key: base-${{ github.run_id }}
+
+      - name: Salvar base de cotações (repositório privado)
+        if: always()
+        env:
+          DADOS_TOKEN: ${{ secrets.DADOS_TOKEN }}
+        run: |
+          if [ -z "$DADOS_TOKEN" ] || [ ! -d /tmp/dados/.git ] || [ ! -d data/base ]; then exit 0; fi
+          mkdir -p /tmp/dados/base && cp -a data/base/. /tmp/dados/base/
+          cd /tmp/dados
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -q -m "Base de cotações $(date -u +%Y-%m-%d)"
+            git push -q origin HEAD:main || echo "::warning::Não consegui gravar o backup em ${DADOS_REPO}."
+          fi
 
       # O GitHub desliga agendamentos de repositórios públicos após 60 dias sem atividade.
       # Um commit pequeno por mês evita isso.

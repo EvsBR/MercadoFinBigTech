@@ -169,3 +169,10 @@ table.corr th { text-align: center; }
   .top-inner { flex-direction: column; align-items: flex-start; }
   .tile .v { font-size: 22px; }
 }
+
+/* logotipo: iniciais do ticker por baixo; a imagem cobre quando carrega */
+.logo { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; flex: none;
+  border-radius: 6px; background: var(--border); color: var(--text-secondary); font-size: 10px; font-weight: 700; letter-spacing: .02em; overflow: hidden; }
+.logo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #fff; }
+#symLogo .logo { margin-right: 0; }
+.foot a { color: inherit; }

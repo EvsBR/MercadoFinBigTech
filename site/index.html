@@ -24,7 +24,11 @@
   <div id="banner" class="banner" hidden></div>
 
   <div class="filters" role="toolbar" aria-label="Filtros">
+    <label>Segmento
+      <select id="segSel" aria-label="Escolher mercado e segmento"></select>
+    </label>
     <label>Ativo
+      <span id="symLogo"></span>
       <select id="symSel" aria-label="Escolher ativo"></select>
     </label>
     <nav class="tabs" role="tablist" aria-label="Seções">
@@ -148,7 +152,7 @@
       </div>
       <div class="card">
         <div class="card-head">
-          <h2>Correlação média entre as big techs (52 semanas)</h2>
+          <h2>Correlação média entre as ações do segmento (52 semanas)</h2>
           <p class="hint">Média das correlações de todos os pares. Valores altos = as ações se movem em bloco, típico de mercados guiados por um fator macro único ou por pânico.</p>
         </div>
         <div class="chart" id="chAvgCorr" style="height:320px"></div>
@@ -160,7 +164,7 @@
       <div class="card">
         <h2>Como os números são calculados</h2>
         <h3>Dados</h3>
-        <p>Fechamentos diários ajustados por desdobramentos e dividendos (retorno total), do primeiro pregão disponível de cada ativo até o último fechamento. A coleta roda todo dia útil depois do fechamento de Nova York. Fonte principal: Yahoo Finance (via biblioteca <code>yfinance</code>); fonte reserva opcional: Tiingo. Se as duas falharem, o painel usa o último dado salvo e avisa no topo da página.</p>
+        <p>Fechamentos diários ajustados por desdobramentos e dividendos (retorno total), do primeiro pregão disponível de cada ativo até o último fechamento. A coleta roda todo dia útil depois do fechamento de Nova York. As cotações ficam guardadas numa base própria (abertura, máxima, mínima, fechamento e volume de cada pregão) e passam por conferência automática antes de entrar no site. Fonte principal: Yahoo Finance; reservas opcionais: Tiingo e Twelve Data. Se todas falharem, o painel usa a base salva e avisa no topo da página.</p>
         <h3>Drawdown</h3>
         <p>Distância do preço até o maior valor já registrado até aquela data: <code>preço ÷ recorde anterior − 1</code>. Cada episódio vai do pico ao fundo e termina quando o preço supera o pico antigo. Os gráficos usam o menor valor de cada semana; a tabela usa dados diários.</p>
         <h3>Ciclos</h3>

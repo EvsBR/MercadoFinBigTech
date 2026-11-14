@@ -1,0 +1,14 @@
+{
+  "_comentario": "Um mercado por linha. 'fontes' é a ordem de tentativa ao baixar cotações. Para ligar um mercado novo, crie o arquivo dele nesta pasta e ponha 'ativo': true.",
+  "mercados": [
+    {
+      "id": "eua",
+      "nome": "Ações EUA",
+      "moeda": "US$",
+      "arquivo": "eua.json",
+      "fontes": ["yahoo", "tiingo", "twelvedata"],
+      "referencia_principal": "QQQ",
+      "ativo": true
+    }
+  ]
+}

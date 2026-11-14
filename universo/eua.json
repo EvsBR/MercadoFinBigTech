@@ -1,0 +1,30 @@
+{
+  "_comentario": "Para adicionar uma ação: inclua uma linha {\"id\": \"TICKER\", \"nome\": \"Nome\"} no segmento desejado. Campos opcionais: 'tickers' (símbolo diferente em alguma fonte, ex.: {\"yahoo\": \"BRK-B\"}), 'logo' (ex.: \"ticker/AAPL\" ou \"apple.com\") e 'moeda'.",
+  "mercado": "eua",
+  "referencias": [
+    {"id": "QQQ", "nome": "Nasdaq-100 (QQQ)", "tipo": "etf"},
+    {"id": "SPY", "nome": "S&P 500 (SPY)", "tipo": "etf"},
+    {"id": "SMH", "nome": "Semicondutores (SMH)", "tipo": "etf"}
+  ],
+  "segmentos": [
+    {
+      "id": "bigtechs",
+      "nome": "Big Techs e IA",
+      "destaque": "NVDA",
+      "ativos": [
+        {"id": "AAPL", "nome": "Apple"},
+        {"id": "MSFT", "nome": "Microsoft"},
+        {"id": "NVDA", "nome": "Nvidia"},
+        {"id": "GOOGL", "nome": "Alphabet"},
+        {"id": "AMZN", "nome": "Amazon"},
+        {"id": "META", "nome": "Meta"},
+        {"id": "TSLA", "nome": "Tesla"},
+        {"id": "AVGO", "nome": "Broadcom"},
+        {"id": "ORCL", "nome": "Oracle"},
+        {"id": "AMD", "nome": "AMD"},
+        {"id": "TSM", "nome": "TSMC (ADR)"},
+        {"id": "MU", "nome": "Micron"}
+      ]
+    }
+  ]
+}

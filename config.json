@@ -1,26 +1,7 @@
 {
   "title": "Painel Big Techs",
-  "currency": "US$",
   "start": "max",
-  "main_benchmark": "QQQ",
   "cycle_thresholds": [0.15, 0.20, 0.30],
-  "tickers": [
-    {"symbol": "AAPL",  "name": "Apple"},
-    {"symbol": "MSFT",  "name": "Microsoft"},
-    {"symbol": "NVDA",  "name": "Nvidia"},
-    {"symbol": "GOOGL", "name": "Alphabet"},
-    {"symbol": "AMZN",  "name": "Amazon"},
-    {"symbol": "META",  "name": "Meta"},
-    {"symbol": "TSLA",  "name": "Tesla"},
-    {"symbol": "AVGO",  "name": "Broadcom"},
-    {"symbol": "ORCL",  "name": "Oracle"},
-    {"symbol": "AMD",   "name": "AMD"},
-    {"symbol": "TSM",   "name": "TSMC (ADR)"},
-    {"symbol": "MU",    "name": "Micron"}
-  ],
-  "benchmarks": [
-    {"symbol": "QQQ", "name": "Nasdaq-100 (QQQ)"},
-    {"symbol": "SPY", "name": "S&P 500 (SPY)"},
-    {"symbol": "SMH", "name": "Semicondutores (SMH)"}
-  ]
+  "logo_dev_token": "",
+  "_comentario": "Os ativos ficam em universo/. 'logo_dev_token' é a chave publicável (pk_...) da Logo.dev; vazia = o site mostra as iniciais do ticker."
 }
