@@ -6,6 +6,7 @@ on:
   push:
     branches-ignore: [main]
   pull_request:
+  workflow_dispatch:           # botão "Run workflow": confere as fontes de reserva sob demanda
 
 permissions:
   contents: read
