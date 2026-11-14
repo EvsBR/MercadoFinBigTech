@@ -5,3 +5,7 @@ data/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# chaves nunca vão para o repositório: use Settings → Secrets and variables → Actions
+*.env
+token/

@@ -28,6 +28,8 @@ RAIZ = Path(__file__).resolve().parents[1]
 REUSO_HORAS = 4            # não baixa de novo o que foi baixado há menos que isso
 MIN_PREGOES_INDICADORES = 60
 CHAVES_ENV = ("TIINGO_API_KEY", "TWELVEDATA_API_KEY")
+# ensaio de falha: PAINEL_PULAR_FONTES=yahoo finge que o Yahoo está fora do ar
+PULAR = {f.strip() for f in os.environ.get("PAINEL_PULAR_FONTES", "").split(",") if f.strip()}
 
 
 def obter(ativo, mercado: Mercado, raiz_base: Path, estado: dict, env: dict,
@@ -46,7 +48,7 @@ def obter(ativo, mercado: Mercado, raiz_base: Path, estado: dict, env: dict,
     if not offline:
         for fid in mercado.fontes:
             mod = FONTES[fid]
-            if fid in esgotadas or not mod.disponivel(env):
+            if fid in esgotadas or fid in PULAR or not mod.disponivel(env):
                 continue
             try:
                 novo = mod.baixar(ativo.ticker(fid), env)

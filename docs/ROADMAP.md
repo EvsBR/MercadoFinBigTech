@@ -25,6 +25,12 @@ Memória do projeto entre conversas. Cada fase começa lendo este arquivo e `ARQ
 | 6 | Design: mockup aprovado, tons de verde, animações, zoom, legenda clicável | A fazer |
 | 7 | Aba Fundamentalista (SEC e CVM) | A fazer |
 
+## Conferido em 14/11/2026
+
+- Tiingo: histórico completo bate com o Yahoo (diferença mediana do preço ajustado abaixo de 0,002% em AAPL, NVDA, MSFT). Começa mais tarde em AMD (1983) e MU (1989) e ajusta TSM de outro jeito antes de 2003; nesses casos a validação mantém a base do Yahoo.
+- Twelve Data: fechamentos idênticos aos da base; emenda dos últimos pregões funcionou.
+- Ensaio com o Yahoo desligado (`PAINEL_PULAR_FONTES=yahoo`): 15 de 15 ativos pela Tiingo.
+
 ## Pendências do dono do projeto
 
 - [ ] Criar chave gratuita na Tiingo e salvar como segredo `TIINGO_API_KEY` (reserva de histórico completo).
