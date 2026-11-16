@@ -145,7 +145,7 @@ def test_todo_alvo_publicado_leva_o_indicador_ao_nivel(ticker, corte, tempo):
         obtido = indicador_lento(nome, list(base) + [x["preco"]])
         # folga = arredondamento do preço publicado (7 algarismos)
         assert obtido == pytest.approx(x["nivel"], abs=2e-3 if nome == "rsi" else 5e-6), (nome, x)
-        assert x["var"] == pytest.approx(x["preco"] / a["ultimo"]["preco"] - 1, abs=1e-6)
+        assert x["var"] == round(x["preco"] / a["ultimo"]["preco"] - 1, 6)
     assert n_alvos >= 30                                   # históricos curtos não têm MM250 mensal
 
 

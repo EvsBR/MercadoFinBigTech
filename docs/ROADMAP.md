@@ -35,6 +35,12 @@ Memória do projeto entre conversas. Cada fase começa lendo este arquivo e `ARQ
 - **OBV:** três medidas (nível, saldo de volume em 20 barras, volatilidade em 20 barras), sem preço-alvo.
 - **Pior drawdown do ano:** mínimo da curva de drawdown em cada ano; a média exclui o ano em andamento e o ano inicial quando os dados começam depois de 10 de janeiro.
 
+## Conferido em 16/11/2026 (Fase 2)
+
+- Revisão independente (agente que não viu o código) recalculou NVDA, MSFT, TSLA, META e SPY em D, S e M a partir da base: 134.820 comparações, 1 diferença, na 6ª casa da coluna de variação (corrigida: a variação agora sai do preço publicado). Os 804 preços-alvo reproduzem o nível pedido e batem com busca por bisseção.
+- SMA, EMA, WMA e RSI idênticos à TA-Lib; OBV difere só pela constante inicial.
+- Varredura no navegador: 15 ativos × 3 períodos × 3 tipos de média sem inconsistência entre curvas e tabelas.
+
 ## Conferido em 14/11/2026
 
 - Tiingo: histórico completo bate com o Yahoo (diferença mediana do preço ajustado abaixo de 0,002% em AAPL, NVDA, MSFT). Começa mais tarde em AMD (1983) e MU (1989) e ajusta TSM de outro jeito antes de 2003; nesses casos a validação mantém a base do Yahoo.

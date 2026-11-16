@@ -190,7 +190,7 @@ class _Alvos:
                   f"pedido {nivel!r}, obtido {obtido!r} com preço {preco!r}", flush=True)
             return
         linha["preco"] = price(preco, 7)
-        linha["var"] = num(preco / self.atual - 1, 6)
+        linha["var"] = num(linha["preco"] / self.atual - 1, 6)     # a variação sai do preço publicado
 
 
 def alvos_drawdown(base: np.ndarray, atual: float, niveis: list[tuple], rotulo: str) -> list[dict]:
