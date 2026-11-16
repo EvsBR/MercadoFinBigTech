@@ -56,7 +56,10 @@ def test_construcao_completa_em_modo_demo(tmp_path):
     ativo = json.loads((saida / meta["tickers"][0]["file"]).read_text())
     for chave in [i["chave"] for i in idx["indicadores"]] + ["stats"]:
         assert chave in ativo
-    assert len(ativo["series"]["d"]) == len(ativo["drawdown"]["serie"])
+    for tempo in ativo["tecnica"]["tempos"]:            # arquivos à parte da análise técnica
+        arq = saida / meta["tickers"][0]["file"].replace(".json", f".tecnica.{tempo}.json")
+        tec = json.loads(arq.read_text())
+        assert tec["tf"] == tempo and len(tec["d"]) == len(tec["c"]) == len(tec["v"])
     assert not (tmp_path / "base").exists()          # o modo demo nunca toca na base real
 
 

@@ -40,6 +40,12 @@ def price(x, digits: int = 6):
     return float(f"{xf:.{digits}g}")
 
 
+def preco_tela(df: pd.DataFrame) -> pd.Series:
+    """Fechamento de tela: ajustado só por desdobramentos, em 7 algarismos significativos.
+    É o preço dos gráficos de qualquer plataforma; drawdown e análise técnica usam este."""
+    return df["close"].map(lambda x: price(x, 7)).astype("float64")
+
+
 def dstr(ts):
     if ts is None or (isinstance(ts, float) and math.isnan(ts)) or pd.isna(ts):
         return None

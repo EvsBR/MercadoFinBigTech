@@ -6,6 +6,8 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .calendario import CALENDARIOS
+
 ID_OK = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._^=-]{0,19}$")
 SLUG_OK = re.compile(r"^[a-z0-9][a-z0-9-]{0,29}$")
 
@@ -48,6 +50,7 @@ class Mercado:
     ativos: dict[str, Ativo]          # todos (ações + referências), por id
     referencias: list[str]
     segmentos: list[Segmento]
+    calendario: str = "dias_uteis"     # nyse | dias_uteis | 24x7 (ver pipeline/calendario.py)
 
 
 def _ativo(raw: dict, mercado: dict, referencia: bool, onde: str) -> Ativo:
@@ -91,6 +94,9 @@ def carregar(pasta: Path, fontes_conhecidas: set[str] | None = None) -> list[Mer
             ruins = [f for f in m["fontes"] if f not in fontes_conhecidas]
             if ruins:
                 raise ErroUniverso(f"{arq.name}/{mid}: fonte desconhecida {ruins}")
+        cal = m.get("calendario", "dias_uteis")
+        if cal not in CALENDARIOS:
+            raise ErroUniverso(f"{arq.name}/{mid}: calendario '{cal}' desconhecido (use {', '.join(CALENDARIOS)})")
         try:
             raw = json.loads((pasta / m["arquivo"]).read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
@@ -131,7 +137,7 @@ def carregar(pasta: Path, fontes_conhecidas: set[str] | None = None) -> list[Mer
             raise ErroUniverso(f"{arq.name}/{mid}: referencia_principal '{principal}' não está em referencias")
         mercados.append(Mercado(id=mid, nome=m["nome"], moeda=m["moeda"], fontes=list(m["fontes"]),
                                 referencia_principal=principal or (refs[0] if refs else None),
-                                ativos=ativos, referencias=refs, segmentos=segmentos))
+                                ativos=ativos, referencias=refs, segmentos=segmentos, calendario=cal))
     if not mercados:
         raise ErroUniverso("nenhum mercado ativo em mercados.json")
     return mercados

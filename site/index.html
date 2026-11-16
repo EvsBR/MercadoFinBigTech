@@ -3,12 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Painel Big Techs — drawdowns, ciclos, sazonalidade e correlações</title>
-  <meta name="description" content="Histórico completo das big techs: drawdowns, ciclos de alta e baixa, sazonalidade mensal, bimestral e trimestral e correlações. Atualizado automaticamente.">
+  <title>Painel Big Techs — análise técnica, ciclos, sazonalidade e correlações</title>
+  <meta name="description" content="Histórico completo das big techs: drawdown, médias móveis, RSI e OBV com preços-alvo, ciclos de alta e baixa, sazonalidade mensal, bimestral e trimestral e correlações. Atualizado automaticamente.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%232a78d6%22/%3E%3Cpath d=%22M3 11l3-3 2 2 5-5%22 stroke=%22white%22 stroke-width=%221.6%22 fill=%22none%22/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
   <script src="vendor/echarts.min.js" defer></script>
+  <script src="indicadores.js" defer></script>
   <script src="app.js" defer></script>
+  <script src="tecnica.js" defer></script>
 </head>
 <body>
   <header class="top">
@@ -33,7 +35,7 @@
     </label>
     <nav class="tabs" role="tablist" aria-label="Seções">
       <button role="tab" data-tab="resumo">Resumo</button>
-      <button role="tab" data-tab="drawdowns">Drawdowns</button>
+      <button role="tab" data-tab="tecnica">Análise Técnica</button>
       <button role="tab" data-tab="ciclos">Ciclos</button>
       <button role="tab" data-tab="sazonalidade">Sazonalidade</button>
       <button role="tab" data-tab="correlacoes">Correlações</button>
@@ -60,20 +62,90 @@
       </div>
     </section>
 
-    <!-- DRAWDOWNS -->
-    <section id="tab-drawdowns" class="tab" hidden>
-      <div class="tiles" id="ddTiles"></div>
-      <div class="card">
-        <div class="card-head">
-          <h2 id="ddTitle">Preço e drawdown</h2>
-          <p class="hint">Preço ajustado em escala logarítmica (cada degrau igual = mesma variação percentual). Embaixo, a distância do último recorde. Arraste a barra inferior para dar zoom.</p>
+    <!-- ANÁLISE TÉCNICA -->
+    <section id="tab-tecnica" class="tab" hidden>
+      <div class="controls tec-controls">
+        <span class="ctl-label">Barras</span>
+        <div class="seg" id="tfSeg" role="group" aria-label="Período das barras">
+          <button data-v="D">Diário</button><button data-v="S">Semanal</button><button data-v="M">Mensal</button>
         </div>
-        <div class="chart" id="chPriceDd" style="height:560px"></div>
+        <span class="ctl-label">Janela dos gráficos</span>
+        <div class="seg" id="rangeSeg" role="group" aria-label="Janela dos gráficos">
+          <button data-v="1">1 ano</button><button data-v="3">3 anos</button><button data-v="10">10 anos</button><button data-v="max">Tudo</button>
+        </div>
       </div>
-      <div class="card">
-        <div class="card-head"><h2>Maiores quedas (≥ 10%)</h2></div>
-        <div class="table-wrap"><table class="data" id="ddTable"></table></div>
-      </div>
+      <p class="tec-contexto" id="tecContexto"></p>
+      <div class="tiles" id="tecTiles"></div>
+
+      <article class="bloco" id="blk-dd">
+        <header class="bloco-head">
+          <h2>Drawdown</h2>
+          <details class="ajuda"><summary aria-label="O que é o drawdown">?</summary><div>
+            <p><strong>Drawdown</strong> é quanto o fechamento está abaixo do maior fechamento já registrado: <code>fechamento ÷ recorde − 1</code>.</p>
+            <p><strong>Pior drawdown do ano</strong> é o ponto mais fundo dessa curva dentro de cada ano; a média usa só anos completos.</p>
+            <p><strong>Acima de</strong> é a parcela do histórico em que o indicador esteve abaixo do valor de agora.</p>
+          </div></details>
+        </header>
+        <div class="card"><div class="chart" id="chTecDd" style="height:500px"></div></div>
+        <div class="duas">
+          <div class="card"><h3>Agora × histórico</h3><div class="table-wrap"><table class="data" id="tDdHist"></table></div></div>
+          <div class="card"><h3>Preços-alvo</h3><p class="cap" id="capDd"></p><div class="table-wrap"><table class="data" id="tDdAlvos"></table></div></div>
+        </div>
+        <div class="card"><h3>Maiores quedas (≥ 10%)</h3><div class="table-wrap"><table class="data" id="tDdEps"></table></div></div>
+      </article>
+
+      <article class="bloco" id="blk-mm">
+        <header class="bloco-head">
+          <h2>Médias móveis</h2>
+          <details class="ajuda"><summary aria-label="O que são as médias móveis">?</summary><div>
+            <p><strong>Simples:</strong> média dos últimos N fechamentos. <strong>Exponencial:</strong> peso <code>2 ÷ (N + 1)</code> no fechamento mais recente. <strong>Ponderada:</strong> pesos de 1 a N, o maior no mais recente.</p>
+            <p>O indicador é a <strong>distância do preço à média</strong>: <code>fechamento ÷ média − 1</code>.</p>
+            <p>O preço-alvo já considera que a média se move junto com o preço no próximo pregão.</p>
+          </div></details>
+          <div class="bloco-ctl">
+            <span class="ctl-label">Tipo</span>
+            <div class="seg" id="mmTipoSeg" role="group" aria-label="Tipo de média">
+              <button data-v="sma">Simples</button><button data-v="ema">Exponencial</button><button data-v="wma">Ponderada</button>
+            </div>
+            <span class="ctl-label">Distância no gráfico</span>
+            <div class="seg" id="mmNSeg" role="group" aria-label="Período da média no gráfico de distância"></div>
+          </div>
+        </header>
+        <div class="card"><div class="chart" id="chTecMm" style="height:540px"></div></div>
+        <div class="pilha">
+          <div class="card"><h3>Agora × histórico <span class="h3-sub">distância do preço à média</span></h3><div class="table-wrap"><table class="data" id="tMmHist"></table></div></div>
+          <div class="card"><h3>Preços-alvo</h3><p class="cap" id="capMm"></p><div class="table-wrap"><table class="data" id="tMmAlvos"></table></div></div>
+        </div>
+      </article>
+
+      <article class="bloco" id="blk-rsi">
+        <header class="bloco-head">
+          <h2>RSI 14</h2>
+          <details class="ajuda"><summary aria-label="O que é o RSI">?</summary><div>
+            <p><strong>RSI</strong> (índice de força relativa) de 14 barras, pela fórmula de Wilder: compara a média das altas com a média das quedas e vai de 0 a 100. Acima de 70 é chamado de sobrecompra; abaixo de 30, de sobrevenda.</p>
+            <p>O preço-alvo é o fechamento que levaria o RSI ao nível já no próximo pregão. Quando nenhum preço positivo consegue isso em um único pregão, a linha diz "fora de alcance".</p>
+          </div></details>
+        </header>
+        <div class="card"><div class="chart" id="chTecRsi" style="height:460px"></div></div>
+        <div class="duas">
+          <div class="card"><h3>Agora × histórico</h3><div class="table-wrap"><table class="data" id="tRsiHist"></table></div></div>
+          <div class="card"><h3>Preços-alvo</h3><p class="cap" id="capRsi"></p><div class="table-wrap"><table class="data" id="tRsiAlvos"></table></div></div>
+        </div>
+      </article>
+
+      <article class="bloco" id="blk-obv">
+        <header class="bloco-head">
+          <h2>OBV</h2>
+          <details class="ajuda"><summary aria-label="O que é o OBV">?</summary><div>
+            <p><strong>OBV</strong> (On-Balance Volume) soma o volume da barra quando o fechamento sobe e subtrai quando cai. Começa em zero na primeira barra.</p>
+            <p><strong>Saldo de volume:</strong> variação do OBV em 20 barras ÷ volume total das mesmas 20 barras. Vai de −100% (todo o volume em barras de queda) a +100%.</p>
+            <p><strong>Volatilidade do OBV:</strong> desvio-padrão da variação do OBV em 20 barras ÷ volume médio das mesmas 20 barras.</p>
+            <p>O OBV depende do volume, não só do preço; por isso não tem preço-alvo.</p>
+          </div></details>
+        </header>
+        <div class="card"><div class="chart" id="chTecObv" style="height:460px"></div></div>
+        <div class="card"><h3>Agora × histórico</h3><div class="table-wrap"><table class="data" id="tObvHist"></table></div></div>
+      </article>
     </section>
 
     <!-- CICLOS -->
@@ -165,8 +237,15 @@
         <h2>Como os números são calculados</h2>
         <h3>Dados</h3>
         <p>Fechamentos diários ajustados por desdobramentos e dividendos (retorno total), do primeiro pregão disponível de cada ativo até o último fechamento. A coleta roda todo dia útil depois do fechamento de Nova York. As cotações ficam guardadas numa base própria (abertura, máxima, mínima, fechamento e volume de cada pregão) e passam por conferência automática antes de entrar no site. Fonte principal: Yahoo Finance; reservas opcionais: Tiingo e Twelve Data. Se todas falharem, o painel usa a base salva e avisa no topo da página.</p>
-        <h3>Drawdown</h3>
-        <p>Distância do preço até o maior valor já registrado até aquela data: <code>preço ÷ recorde anterior − 1</code>. Cada episódio vai do pico ao fundo e termina quando o preço supera o pico antigo. Os gráficos usam o menor valor de cada semana; a tabela usa dados diários.</p>
+        <h3>Análise técnica</h3>
+        <p><strong>Preço:</strong> fechamento de tela, ajustado por desdobramentos e sem dividendos, o mesmo de qualquer plataforma de gráficos. Retornos, ciclos e sazonalidade continuam em retorno total (com dividendos).</p>
+        <p><strong>Barras:</strong> diárias, semanais (último pregão da semana) ou mensais (último pregão do mês); o volume da barra é a soma do período. A barra da semana ou do mês em andamento usa o último fechamento disponível.</p>
+        <p><strong>Drawdown:</strong> <code>fechamento ÷ maior fechamento até a data − 1</code>. Cada episódio vai do pico ao fundo e termina quando o preço supera o pico antigo. O pior drawdown do ano é o ponto mais fundo dessa curva em cada ano; a média usa anos completos.</p>
+        <p><strong>Médias móveis:</strong> simples (média dos últimos N fechamentos), exponencial (alfa <code>2 ÷ (N + 1)</code>, começando pela média simples das N primeiras barras) e ponderada linear (pesos de 1 a N). O indicador é a distância do preço à média: <code>fechamento ÷ média − 1</code>.</p>
+        <p><strong>RSI 14:</strong> fórmula de Wilder, <code>100 − 100 ÷ (1 + ganho médio ÷ perda média)</code>, com médias suavizadas de 14 barras.</p>
+        <p><strong>OBV:</strong> soma o volume quando o fechamento sobe e subtrai quando cai. Saldo de volume: variação do OBV em 20 barras ÷ volume das mesmas barras. Volatilidade do OBV: desvio-padrão da variação do OBV em 20 barras ÷ volume médio das mesmas barras.</p>
+        <p><strong>Agora × histórico:</strong> mínima, média e máxima usam todas as barras desde o início dos dados. "Acima de" é a parcela do histórico em que o indicador esteve abaixo do valor de agora.</p>
+        <p><strong>Preços-alvo:</strong> fechamento que o ativo precisa ter no próximo pregão para o indicador chegar ao nível. Em barras semanais e mensais, se o próximo pregão ainda cai na barra em andamento, ele substitui o fechamento dela; se não, abre uma barra nova. Médias e RSI mudam junto com o preço, e a conta já considera isso. Cada preço publicado é conferido recalculando o indicador com ele.</p>
         <h3>Ciclos</h3>
         <p>Regra do limiar (15%, 20% ou 30%): uma fase de baixa é confirmada quando o preço cai o limiar desde o último pico; uma fase de alta, quando sobe o limiar desde o último fundo. Cada fase começa no pico ou no fundo, não no dia da confirmação. A primeira fase começa no primeiro dado disponível e fica fora das medianas. A fase em andamento só vira outra quando o limiar é atingido. Por isso uma ação pode estar 15% abaixo do pico e ainda constar em "alta" pela regra de 20%.</p>
         <h3>Sazonalidade</h3>

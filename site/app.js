@@ -8,11 +8,13 @@ const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
 const state = {
   idx: null, market: null, seg: null, meta: null, corr: null, cache: {},
   tab: "resumo", sym: null,
+  tf: "D", mmTipo: "sma", mmN: 200, range: { D: "3", S: "10", M: "max" },   // Análise Técnica
   th: "20", freq: "M", mode: "abs", bench: null, since: null, win: "3a",
   sortKey: "dd_current", sortDir: 1,
 };
 const charts = {};
-const TABS = ["resumo", "drawdowns", "ciclos", "sazonalidade", "correlacoes", "metodologia"];
+const TABS = ["resumo", "tecnica", "ciclos", "sazonalidade", "correlacoes", "metodologia"];
+const TAB_ANTIGA = { drawdowns: "tecnica" };   // links antigos continuam funcionando
 
 /* ---------------------------------------------------------------- formatação pt-BR */
 const nf = (d) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -33,7 +35,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 function T() {
   return {
-    s: [cssVar("--series-1"), cssVar("--series-2"), cssVar("--series-3")],
+    s: [cssVar("--series-1"), cssVar("--series-2"), cssVar("--series-3"), cssVar("--series-4")],
     red: cssVar("--series-red"), text: cssVar("--text-primary"), text2: cssVar("--text-secondary"),
     muted: cssVar("--muted"), grid: cssVar("--grid"), axis: cssVar("--axis"),
     surface: cssVar("--surface-1"), mid: cssVar("--div-mid"), ghost: cssVar("--ghost-bar"),
@@ -124,7 +126,9 @@ const swatch = (c) => `<span style="display:inline-block;width:9px;height:9px;bo
 /* ---------------------------------------------------------------- navegação */
 function readHash() {
   const h = new URLSearchParams(location.hash.slice(1));
-  if (TABS.includes(h.get("aba"))) state.tab = h.get("aba");
+  const aba = TAB_ANTIGA[h.get("aba")] || h.get("aba");
+  if (TABS.includes(aba)) state.tab = aba;
+  if (["D", "S", "M"].includes(h.get("barras"))) state.tf = h.get("barras");
   const s = h.get("ativo");
   if (s && rowOf(s)) state.sym = s;
 }
@@ -135,6 +139,7 @@ function hashSeg() {
 }
 function writeHash() {
   const h = new URLSearchParams({ aba: state.tab, seg: segKey(), ativo: state.sym });
+  if (state.tab === "tecnica") h.set("barras", state.tf);
   history.replaceState(null, "", "#" + h.toString());
 }
 function setTab(tab) {
@@ -195,7 +200,7 @@ function renderResumo() {
     h.onclick = go; h.onkeydown = (e) => { if (e.key === "Enter") go(); };
   });
   $$("tr.click", tbl).forEach((tr) => {
-    const go = () => { state.sym = tr.dataset.sym; $("#symSel").value = state.sym; $("#symLogo").innerHTML = logo(rowOf(state.sym)); setTab("drawdowns"); };
+    const go = () => { state.sym = tr.dataset.sym; $("#symSel").value = state.sym; $("#symLogo").innerHTML = logo(rowOf(state.sym)); setTab("tecnica"); };
     tr.onclick = go; tr.onkeydown = (e) => { if (e.key === "Enter") go(); };
   });
 
@@ -220,55 +225,8 @@ function renderResumo() {
   }, true);
 }
 
-/* ---------------------------------------------------------------- DRAWDOWNS */
+/* ---------------------------------------------------------------- cartões */
 function tile(k, v, s = "") { return `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ""}</div>`; }
-async function renderDrawdowns() {
-  const d = await loadSym(state.sym); const th = T(); const st = d.stats; const dd = d.drawdown;
-  $("#ddTitle").textContent = `${d.symbol} · ${d.name}: preço e drawdown desde ${fdate(st.first_date)}`;
-  const cur = dd.current;
-  $("#ddTiles").innerHTML =
-    tile("Drawdown atual", st.dd_current > -0.0005 ? "0%" : pct(st.dd_current), cur ? `pico em ${fdate(cur.peak)} · há ${fdays(cur.days_total)}` : "no recorde histórico") +
-    tile("Pior drawdown", pct(st.dd_max), `${fdate(st.dd_max_peak)} → ${fdate(st.dd_max_trough)}`) +
-    tile("Recuperação do pior", st.dd_max_recovery ? fdays(dd.episodes[0]?.days_recover) : "não recuperou", st.dd_max_recovery ? `voltou ao pico em ${fdate(st.dd_max_recovery)}` : "ainda abaixo do pico daquela época") +
-    tile("Quedas ≥ 20% / ≥ 30%", `${dd.count_20} / ${dd.count_30}`, `episódios desde ${st.first_date.slice(0, 4)}`);
-
-  const S = d.series;
-  const price = S.d.map((x, i) => [x, S.p[i]]);
-  const DD = dd.serie;
-  const ddv = S.d.map((x, i) => [x, DD[i]]);
-  const worst = dd.episodes[0];
-  let worstPt = null;
-  if (worst) { // ponto semanal mais próximo do fundo
-    const i = S.d.findIndex((x) => x >= worst.trough);
-    if (i >= 0) worstPt = [S.d[i], DD[i]];
-  }
-  const c = chart("chPriceDd");
-  c.setOption({
-    ...base(th),
-    tooltip: { ...base(th).tooltip, formatter: (ps) => {
-      const i = ps[0].dataIndex;
-      return `<strong>${dateOf(ps[0])}</strong><br>${swatch(th.s[0])}Preço ajustado: <strong>${money(S.p[i], d.currency)}</strong><br>${swatch(th.red)}Drawdown: <strong>${pct(DD[i])}</strong>`;
-    } },
-    axisPointer: { link: [{ xAxisIndex: "all" }] },
-    grid: [{ left: 72, right: 24, top: 16, height: "50%" }, { left: 72, right: 24, top: "64%", bottom: 70 }],
-    xAxis: [xTime(th, { gridIndex: 0, axisLabel: { show: false } }), xTime(th, { gridIndex: 1 })],
-    yAxis: [
-      yVal(th, { type: "log", logBase: 10, gridIndex: 0, axisLabel: { color: th.muted, formatter: (v) => (v < 1 ? nf(2).format(v) : nf(0).format(v)) } }),
-      yVal(th, { gridIndex: 1, max: 0, axisLabel: { color: th.muted, formatter: (v) => pct(v, 0) } }),
-    ],
-    dataZoom: [{ type: "inside", xAxisIndex: [0, 1] }, { type: "slider", xAxisIndex: [0, 1], bottom: 14, height: 22, borderColor: th.grid, textStyle: { color: th.muted }, fillerColor: rgba(th.s[0], 0.12), dataBackground: { lineStyle: { color: th.axis }, areaStyle: { color: rgba(th.axis, 0.3) } } }],
-    series: [
-      { name: "Preço ajustado", type: "line", data: price, showSymbol: false, lineStyle: { width: 2, color: th.s[0] }, itemStyle: { color: th.s[0] } },
-      { name: "Drawdown", type: "line", xAxisIndex: 1, yAxisIndex: 1, data: ddv, showSymbol: false, lineStyle: { width: 1.5, color: th.red }, itemStyle: { color: th.red }, areaStyle: { color: rgba(th.red, 0.18) },
-        markPoint: worstPt ? { symbol: "circle", symbolSize: 9, itemStyle: { color: th.red, borderColor: th.surface, borderWidth: 2 },
-          label: { show: true, position: "bottom", color: th.text2, fontSize: 11, formatter: () => `pior: ${pct(worst.depth, 0)}` },
-          data: [{ coord: worstPt }] } : undefined },
-    ],
-  }, true);
-
-  $("#ddTable").innerHTML = "<thead><tr><th class='l'>#</th><th>Queda</th><th>Pico</th><th>Fundo</th><th>Tempo de queda</th><th>Recuperação</th><th>Tempo para recuperar</th><th>Duração total</th></tr></thead><tbody>" +
-    dd.episodes.map((e, i) => `<tr><td class="l">${i + 1}</td><td class="neg"><strong>${pct(e.depth)}</strong></td><td>${fdate(e.peak)}</td><td>${fdate(e.trough)}</td><td>${fdays(e.days_down)}</td><td>${e.recovery ? fdate(e.recovery) : "<em>em andamento</em>"}</td><td>${e.recovery ? fdays(e.days_recover) : "—"}</td><td>${fdays(e.days_total)}</td></tr>`).join("") + "</tbody>";
-}
 
 /* ---------------------------------------------------------------- CICLOS */
 async function renderCiclos() {
@@ -456,7 +414,7 @@ async function renderCorrelacoes() {
       xAxis: xTime(th), yAxis: yVal(th, { min: -0.4, max: 1, interval: 0.2, axisLabel: { color: th.muted, formatter: (v) => fnum(v, 1) } }),
       dataZoom: [{ type: "inside" }, { type: "slider", bottom: 10, height: 20, borderColor: th.grid, textStyle: { color: th.muted }, fillerColor: rgba(th.s[0], 0.12) }],
       series: benches.filter((b) => d.corr[b]).map((b, k) => {
-        const idx = benches.indexOf(b); const col = th.s[idx % 3];
+        const idx = benches.indexOf(b); const col = th.s[idx % th.s.length];
         return { name: b, type: "line", data: d.corr.d.map((x, i) => [x, d.corr[b][i]]), showSymbol: false, connectNulls: false,
           lineStyle: { width: 1.5, color: col }, itemStyle: { color: col },
           endLabel: { show: true, color: th.text2, fontSize: 11, formatter: (p) => `${b} ${fnum(p.value[1], 2)}` } };
@@ -482,7 +440,7 @@ async function renderCorrelacoes() {
 async function render() {
   try {
     if (state.tab === "resumo") renderResumo();
-    else if (state.tab === "drawdowns") await renderDrawdowns();
+    else if (state.tab === "tecnica") await renderTecnica();
     else if (state.tab === "ciclos") await renderCiclos();
     else if (state.tab === "sazonalidade") await renderSazonalidade();
     else if (state.tab === "correlacoes") await renderCorrelacoes();
@@ -506,7 +464,7 @@ function applyTheme(mode) {
 /* monta tudo que depende do segmento escolhido (título, avisos, lista de ativos) */
 function applySegment() {
   const M = state.meta; const I = state.idx;
-  document.title = `${M.title} — drawdowns, ciclos, sazonalidade e correlações`;
+  document.title = `${M.title} — análise técnica, ciclos, sazonalidade e correlações`;
   $("#title").textContent = M.title;
   const gen = new Date(I.generated_at);
   const lastClose = allRows().map((t) => t.last_date).sort().pop();

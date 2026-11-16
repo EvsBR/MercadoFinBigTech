@@ -146,14 +146,16 @@ def processar_mercado(m: Mercado, cfg: dict, args, env: dict, raiz_base: Path, s
         ativo = m.ativos[aid]
         ctx = indicadores.Contexto(ativo=ativo, df=df, df_cheio=tabelas[aid], inicio=inicio, limiares=limiares,
                                    ret_semanal=wret, datas_semana=datas_semana, referencias=refs,
-                                   referencia_principal=principal)
-        blocos, resumo = indicadores.calcular_ativo(ctx)
+                                   referencia_principal=principal, calendario=m.calendario)
+        blocos, resumo, extras = indicadores.calcular_ativo(ctx)
         s = saude[aid]
         comum = {"symbol": aid, "name": ativo.nome, "currency": ativo.moeda, "is_benchmark": ativo.referencia,
                  "tipo": ativo.tipo, "logo": ativo.logo or f"ticker/{aid}",
                  "source": s["fonte"], "stale": bool(s["falhou"] or s["atrasado"])}
         arquivo = f"{m.id}/ativos/{safe_name(aid)}.json"
         escrever(saida / arquivo, {**comum, "stats": resumo, **blocos})
+        for nome, obj in extras.items():
+            escrever(saida / f"{m.id}/ativos/{safe_name(aid)}.{nome}.json", obj)
         linhas[aid] = {**comum, "file": arquivo, **resumo}
 
     segmentos = []

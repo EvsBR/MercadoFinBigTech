@@ -1,12 +1,14 @@
-"""Drawdown: distância do preço ao último recorde, e os episódios de queda."""
+"""Drawdown: distância do preço ao último recorde, e os episódios de queda.
+
+Usa o fechamento de tela (sem dividendos), o mesmo da aba Análise Técnica, para que o número
+do Resumo e o da análise sejam idênticos."""
 from __future__ import annotations
 
 import pandas as pd
 
-from ..util import dstr, num, series_list
-from .retornos import semanal_ultimo
+from ..util import dstr, num, preco_tela
 
-ID, NOME, CHAVE, VERSAO = "drawdown", "Drawdown", "drawdown", 1
+ID, NOME, CHAVE, VERSAO = "drawdown", "Drawdown", "drawdown", 2
 
 
 def serie(s: pd.Series) -> pd.Series:
@@ -51,18 +53,14 @@ def episodios(s: pd.Series) -> list[dict]:
 
 
 def calcular(ctx) -> dict:
-    s = ctx.s
+    s = preco_tela(ctx.df)
     dd = serie(s)
-    wl = semanal_ultimo(s)
-    semana = s.index.to_period("W-FRI")
-    dd_min_semana = dd.groupby(semana).min()
     eps = episodios(s)
     grandes = sorted([e for e in eps if e["depth"] is not None and e["depth"] <= -0.10],
                      key=lambda e: e["depth"])
     atual = next((e for e in reversed(eps) if e["ongoing"]), None)
     pior = grandes[0] if grandes else (min(eps, key=lambda e: e["depth"]) if eps else None)
     dados = {
-        "serie": series_list(dd_min_semana.reindex(wl.index.to_period("W-FRI")), 4),
         "episodes": grandes[:25], "current": atual,
         "count_20": sum(1 for e in eps if e["depth"] is not None and e["depth"] <= -0.20),
         "count_30": sum(1 for e in eps if e["depth"] is not None and e["depth"] <= -0.30),
