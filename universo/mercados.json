@@ -1,5 +1,5 @@
 {
-  "_comentario": "Um mercado por linha. 'fontes' é a ordem de tentativa ao baixar cotações. Para ligar um mercado novo, crie o arquivo dele nesta pasta e ponha 'ativo': true.",
+  "_comentario": "Um mercado por linha. 'fontes' é a ordem de tentativa ao baixar cotações. 'calendario' diz quando é o próximo pregão: 'nyse', 'dias_uteis' (segunda a sexta) ou '24x7'. Para ligar um mercado novo, crie o arquivo dele nesta pasta e ponha 'ativo': true.",
   "mercados": [
     {
       "id": "eua",
@@ -8,6 +8,7 @@
       "arquivo": "eua.json",
       "fontes": ["yahoo", "tiingo", "twelvedata"],
       "referencia_principal": "QQQ",
+      "calendario": "nyse",
       "ativo": true
     }
   ]

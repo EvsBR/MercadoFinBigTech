@@ -19,9 +19,10 @@ Tudo roda em `python -m pipeline.construir`, chamado pelo GitHub Actions todo di
 | `pipeline/fontes/` | Um arquivo por fonte de cotações, todos com o mesmo contrato (`base.py`). |
 | `pipeline/base.py` | Base em disco: um CSV por ativo com abertura, máxima, mínima, fechamento, fechamento ajustado, volume, dividendo e desdobramento. |
 | `pipeline/validacao.py` | Conferências que impedem dado ruim de entrar na base e no site. |
-| `pipeline/indicadores/` | Um arquivo por indicador. `__init__.py` tem o registro e o manifesto. |
+| `pipeline/indicadores/` | Um arquivo por indicador. `__init__.py` tem o registro e o manifesto. `tecnica.py` faz a Análise Técnica. |
+| `pipeline/calendario.py` | Próximo pregão de cada mercado (feriados da NYSE, dias úteis ou 24x7). |
 | `pipeline/construir.py` | Orquestra tudo e escreve `site/data/`. |
-| `site/` | Site estático (HTML, CSS, JS, ECharts). Só desenha; não calcula indicador. |
+| `site/` | Site estático (HTML, CSS, JS, ECharts). `app.js` cuida das abas; `tecnica.js`, da Análise Técnica. Todo número de tabela vem do pipeline. `indicadores.js` só desenha as curvas da Análise Técnica a partir das barras, com as mesmas fórmulas do pipeline (conferidas por teste). |
 | `tests/` | Testes automáticos (`python -m pytest`). |
 
 ## Como a atualização resiste a falhas
@@ -47,6 +48,7 @@ Só avisam: máxima/mínima incoerentes; variações diárias acima de 60% no hi
 | `data/<mercado>/<segmento>/meta.json` | Tabela de resumo do segmento (ações e referências). |
 | `data/<mercado>/<segmento>/correlations.json` | Matrizes de correlação e média entre pares. |
 | `data/<mercado>/ativos/<ATIVO>.json` | Um bloco por indicador (`series`, `drawdown`, `cycles`, `seasonality`, `corr`) e `stats`. |
+| `data/<mercado>/ativos/<ATIVO>.tecnica.<D\|S\|M>.json` | Análise Técnica de um período: barras (`d`, `c`, `v`), `drawdown`, `mm`, `rsi`, `obv` com medidas e preços-alvo. O site baixa só o período escolhido. |
 | `data/saude.json` | Fonte usada, datas e avisos de cada ativo. |
 
 ## Receitas
@@ -63,6 +65,7 @@ Só avisam: máxima/mínima incoerentes; variações diárias acima de 60% no hi
 
 ## Convenções
 
-- `open/high/low/close` da base são ajustados por desdobramento; `adj_close` também por proventos. Indicadores de retorno usam `adj_close`.
+- `open/high/low/close` da base são ajustados por desdobramento; `adj_close` também por proventos. Indicadores de retorno usam `adj_close`; drawdown e Análise Técnica usam `close` (`util.preco_tela`).
+- Um indicador pode devolver `arquivos` além de `dados`: blocos grandes gravados à parte, que o site só baixa quando precisa.
 - Nomes de arquivos, funções e mensagens em português; chaves dos JSON do site em inglês (herdadas da primeira versão).
 - Nenhuma cotação bruta vai para o repositório público: `data/` e `site/data/` estão no `.gitignore`.

@@ -18,12 +18,22 @@ Memória do projeto entre conversas. Cada fase começa lendo este arquivo e `ARQ
 |---|---|---|
 | 0 | Site no ar com cotações reais | Feita (14/11/2026) |
 | 1 | Estrutura para expandir: universo por mercado/segmento, fontes com reserva, base OHLCV, validações, indicadores em módulos, testes, logotipos | Feita (14/11/2026) |
-| 2 | Aba "Análise Técnica": Drawdown, Médias Móveis (SMA/EMA/WMA 50/100/200/250), RSI 14, OBV; tabelas "Agora × histórico" e "Preços-alvo"; filtro D/S/M | A fazer |
+| 2 | Aba "Análise Técnica": Drawdown, Médias Móveis (SMA/EMA/WMA 50/100/200/250), RSI 14, OBV; tabelas "Agora × histórico" e "Preços-alvo"; filtro D/S/M | Feita (16/11/2026) |
 | 3 | Ciclos por eventos: recessões EUA/Brasil, eleições EUA/Brasil, crises globais; Ciclo BTC como "Em desenvolvimento" | A fazer |
 | 4 | Mais segmentos dos EUA, B3, botão Nominal/Real (CPI e IPCA) | A fazer |
 | 5 | Cripto (Binance), filtros 24h/7d, indicador Bitcoin Halving Cycle Profit | A fazer |
 | 6 | Design: mockup aprovado, tons de verde, animações, zoom, legenda clicável | A fazer |
 | 7 | Aba Fundamentalista (SEC e CVM) | A fazer |
+
+## Regras da Análise Técnica (Fase 2)
+
+- **Preço:** fechamento de tela (`close`, ajustado só por desdobramentos), arredondado em 7 algarismos. O drawdown do Resumo usa o mesmo preço. Retornos, ciclos e sazonalidade seguem em `adj_close`.
+- **Barras:** D, S (semana terminada na sexta) e M; fechamento = último pregão; volume = soma. A barra em andamento usa o último fechamento.
+- **Preço-alvo:** fechamento necessário no próximo pregão. Se o próximo pregão cai na mesma semana ou mês da última barra, ele substitui o fechamento dela; se não, abre uma barra nova. O próximo pregão vem de `pipeline/calendario.py` (`calendario` do mercado: `nyse`, `dias_uteis` ou `24x7`).
+- **Conferência:** cada alvo é recalculado do zero antes de publicar (`_Alvos.add`); reprovado sai sem preço e a execução avisa. RSI que pediria preço negativo sai como "fora de alcance em 1 pregão".
+- **Curvas no site:** o pipeline publica barras e números; `site/indicadores.js` desenha as curvas. `tests/test_paridade_js.py` compara as duas implementações e o site confere o último ponto de cada curva contra o "agora" do pipeline.
+- **OBV:** três medidas (nível, saldo de volume em 20 barras, volatilidade em 20 barras), sem preço-alvo.
+- **Pior drawdown do ano:** mínimo da curva de drawdown em cada ano; a média exclui o ano em andamento e o ano inicial quando os dados começam depois de 10 de janeiro.
 
 ## Conferido em 14/11/2026
 
@@ -33,10 +43,10 @@ Memória do projeto entre conversas. Cada fase começa lendo este arquivo e `ARQ
 
 ## Pendências do dono do projeto
 
-- [ ] Criar chave gratuita na Tiingo e salvar como segredo `TIINGO_API_KEY` (reserva de histórico completo).
-- [ ] Criar chave gratuita na Twelve Data e salvar como segredo `TWELVEDATA_API_KEY` (reserva dos últimos pregões).
-- [ ] Criar chave publicável na Logo.dev e colar em `config.json` (`logo_dev_token`).
-- [ ] Opcional: repositório privado `<repo>-dados` + segredo `DADOS_TOKEN` (backup versionado da base).
+- [x] Chaves da Tiingo e da Twelve Data salvas como segredos (14/11/2026).
+- [x] Chave publicável da Logo.dev em `config.json` (14/11/2026).
+- [x] Repositório privado `MercadoFinBigTech-dados` + segredo `DADOS_TOKEN` (14/11/2026). O token vence em um ano e precisa ser renovado.
+- [ ] Confirmar a definição de "volatilidade do OBV" adotada na Fase 2 (desvio-padrão da variação do OBV em 20 barras ÷ volume médio das mesmas barras).
 
 ## Especificação guardada: Bitcoin Halving Cycle Profit (Fase 5)
 

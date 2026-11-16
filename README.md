@@ -2,7 +2,7 @@
 
 Site gratuito, que se atualiza sozinho, com o **histórico completo** (desde o IPO) das big techs e de ações de IA e computação:
 
-- **Drawdowns:** distância do recorde, as maiores quedas da história, o tempo de queda e o tempo de recuperação.
+- **Análise Técnica:** Drawdown, Médias Móveis (simples, exponencial e ponderada de 50, 100, 200 e 250), RSI 14 e OBV, em barras diárias, semanais ou mensais. Cada indicador traz o valor de agora contra a mínima, a média e a máxima históricas e os **preços-alvo**: o fechamento que levaria o indicador ao fundo, à média ou ao topo.
 - **Ciclos:** fases de alta e baixa pela regra de 15%, 20% ou 30%; duração e retorno típicos; onde a fase atual está em relação às anteriores; retorno móvel de 12 meses e de 3 anos.
 - **Sazonalidade:** tabela ano a ano **mensal, bimestral e trimestral**, com média, mediana e % de vezes positivo, em retorno absoluto ou contra uma referência (QQQ, SPY, SMH). Inclui o filtro "desde o ano X".
 - **Correlações:** matriz por janela (1, 3, 5 e 10 anos, ou todo o período), correlação móvel com as referências e a **correlação média entre as big techs**, um termômetro de "comportamento de manada".

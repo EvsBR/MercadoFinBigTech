@@ -12,6 +12,7 @@
   --series-1: #2a78d6;   /* azul  */
   --series-2: #eb6834;   /* laranja */
   --series-3: #1baf7a;   /* água  */
+  --series-4: #eda100;   /* amarelo */
   --series-red: #e34948; /* vermelho (drawdown / baixa) */
   --ghost-bar: #e1e0d9;
   --div-mid: #f0efec;    /* ponto neutro do divergente */
@@ -34,6 +35,7 @@
     --series-1: #3987e5;
     --series-2: #d95926;
     --series-3: #199e70;
+    --series-4: #c98500;
     --series-red: #e66767;
     --ghost-bar: #383835;
     --div-mid: #383835;
@@ -55,6 +57,7 @@
   --series-1: #3987e5;
   --series-2: #d95926;
   --series-3: #199e70;
+  --series-4: #c98500;
   --series-red: #e66767;
   --ghost-bar: #383835;
   --div-mid: #383835;
@@ -176,3 +179,36 @@ table.corr th { text-align: center; }
 .logo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #fff; }
 #symLogo .logo { margin-right: 0; }
 .foot a { color: inherit; }
+
+/* ---------- Análise Técnica ---------- */
+.tec-controls { position: sticky; top: 0; z-index: 6; background: var(--page); padding: 8px 0; margin-bottom: 4px; }
+.tec-contexto { margin: 0 0 14px; font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
+.tec-contexto strong { color: var(--text-primary); }
+.tile-btn { text-align: left; cursor: pointer; font: inherit; color: inherit; width: 100%; }
+.tile-btn:hover { border-color: var(--axis); }
+.bloco { margin-top: 26px; scroll-margin-top: 64px; }
+.bloco-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-bottom: 12px; padding-top: 14px; border-top: 2px solid var(--axis); }
+.bloco-head h2 { font-size: 19px; }
+.bloco-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-left: auto; }
+.bloco .card h3 { margin: 0 0 8px; font-size: 14px; }
+.h3-sub { font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 6px; }
+.cap { margin: -2px 0 10px; font-size: 12.5px; color: var(--text-secondary); }
+.duas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 16px; align-items: start; }
+.duas .card { margin-bottom: 16px; }
+table.data tr.agora td { background: var(--div-mid); font-weight: 600; }
+table.data tr.sel td { background: color-mix(in srgb, var(--series-1) 9%, transparent); }
+table.data td.fora { color: var(--muted); font-style: italic; }
+table.data td .var { font-size: 12px; color: var(--text-secondary); }
+table.data td .var.neg { color: var(--series-red); }
+table.data td .dot { margin-right: 4px; }
+details.ajuda { position: relative; }
+details.ajuda > summary { list-style: none; cursor: pointer; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--axis);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+details.ajuda > summary::-webkit-details-marker { display: none; }
+details.ajuda > summary:hover, details.ajuda[open] > summary { background: var(--div-mid); color: var(--text-primary); }
+details.ajuda > div { position: absolute; z-index: 8; top: 30px; left: 0; width: min(420px, 86vw); background: var(--surface-1); border: 1px solid var(--axis);
+  border-radius: 10px; padding: 12px 14px; box-shadow: 0 8px 24px rgba(0, 0, 0, .14); font-size: 13px; color: var(--text-secondary); }
+details.ajuda > div p { margin: 0 0 8px; }
+details.ajuda > div p:last-child { margin-bottom: 0; }
+.quando { display: block; font-size: 11.5px; color: var(--muted); font-weight: 400; }
+table.data td.l .dot { vertical-align: 0; }
